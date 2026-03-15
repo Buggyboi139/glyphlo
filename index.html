@@ -45,6 +45,23 @@
       text-align: center;
     }
 
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+    }
+    .logo-g {
+      fill: none;
+      stroke: #3498db;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .logo-orb {
+      fill: #3498db;
+      filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.6));
+    }
+
     .instructions {
       font-size: 1rem;
       color: #888;
@@ -140,6 +157,11 @@
       width: 40px;
     }
 
+    .hint-btn:disabled {
+      color: #444;
+      opacity: 0.5;
+    }
+
     .back-btn {
       background: none;
       border: none;
@@ -223,13 +245,67 @@
       color: #f1c40f;
       box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
     }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background: #111116;
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      border: 1px solid #3498db;
+      box-shadow: 0 0 30px rgba(52, 152, 219, 0.3);
+    }
+
+    .modal-title {
+      font-size: 2.5rem;
+      color: #fff;
+      margin: 0 0 10px 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .modal-text {
+      font-size: 1.1rem;
+      color: #888;
+      margin-bottom: 30px;
+    }
   </style>
 </head>
 <body>
 
   <div id="screen-intro" class="screen active">
+    <svg class="logo" viewBox="0 0 100 100">
+      <path class="logo-g" d="M 50 10 L 90 50 L 50 90 M 50 90 L 10 50 L 50 10" />
+      <circle class="logo-orb" cx="50" cy="10" r="6" />
+      <circle class="logo-orb" cx="90" cy="50" r="6" />
+      <circle class="logo-orb" cx="10" cy="50" r="6" />
+      <circle class="logo-orb" cx="50" cy="90" r="6" />
+      <path class="logo-g" d="M 50 10 C 70 20 80 30 90 50" />
+      <path class="logo-g" d="M 90 50 C 80 70 70 80 50 90" />
+    </svg>
     <h1 class="title">GLYPHLO</h1>
-    <p class="instructions">Decipher the words by swapping nodes. Read the pattern clockwise from the top.</p>
+    <p class="instructions">A compounded challenge for curious minds. Decipher the patterns. Connect the flow.</p>
     <button class="btn" onclick="showScreen('screen-select')">Start</button>
   </div>
 
@@ -242,7 +318,7 @@
     <div class="game-header">
       <button class="back-btn" onclick="showScreen('screen-select')">←</button>
       <div class="header-titles">
-        <h1 class="level-text" id="levelDisplay">STAGE 1</h1>
+        <h1 class="level-text" id="levelDisplay">STAGE 1 / 6</h1>
         <p class="flavor-text" id="flavorDisplay">3 LETTERS</p>
       </div>
       <button class="hint-btn" id="hintBtn" onclick="useHint()">💡</button>
@@ -256,10 +332,16 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="milestoneModal">
+    <div class="modal-content">
+      <h2 class="modal-title">NEW FLOW</h2>
+      <p class="modal-text" id="modalText"></p>
+      <button class="btn" onclick="closeModal()">Continue</button>
+    </div>
+  </div>
+
   <script>
-    let currentStage = 1;
     let currentDifficulty = 3;
-    const maxStages = 5;
     let targetWord = "";
     let currentLetters = [];
     let lockedOrbs = [];
@@ -276,9 +358,14 @@
     const guessDisplay = document.getElementById('guessDisplay');
     const hintBtn = document.getElementById('hintBtn');
     const gameBoard = document.getElementById('gameBoard');
+    const milestoneModal = document.getElementById('milestoneModal');
+    const modalText = document.getElementById('modalText');
 
+    function getRequiredStages(letterCount) { return (letterCount - 1) * 3; }
     function getUnlocked() { return parseInt(localStorage.getItem('glyphloUnlocked')) || 3; }
     function setUnlocked(lvl) { localStorage.setItem('glyphloUnlocked', lvl); }
+    function getLevelsSolved() { try { return JSON.parse(localStorage.getItem('glyphloLevelsSolved')) || {}; } catch (e) { return {}; } }
+    function setLevelsSolved(data) { localStorage.setItem('glyphloLevelsSolved', JSON.stringify(data)); }
 
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -294,7 +381,7 @@
         btn.className = `level-btn ${i <= unlocked ? 'unlocked' : ''}`;
         btn.innerHTML = `<span>${i} LETTERS</span> <span>${i <= unlocked ? '▶' : '🔒'}</span>`;
         btn.disabled = i > unlocked;
-        btn.onclick = () => { currentDifficulty = i; currentStage = 1; showScreen('screen-game'); startLevel(); };
+        btn.onclick = () => { currentDifficulty = i; showScreen('screen-game'); startLevel(); };
         grid.appendChild(btn);
       }
     }
@@ -311,8 +398,9 @@
 
     async function startLevel() {
       isAnimating = false; selectedIndex = null; activeDragIndex = null;
-      orbLayer.innerHTML = ''; wireLayer.innerHTML = ''; hintBtn.disabled = false;
-      levelDisplay.textContent = `STAGE ${currentStage}`;
+      orbLayer.innerHTML = ''; wireLayer.innerHTML = '';
+      const solved = getLevelsSolved()[currentDifficulty] || 0;
+      levelDisplay.textContent = `STAGE ${solved + 1} / ${getRequiredStages(currentDifficulty)}`;
       flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
       guessDisplay.textContent = "LOADING...";
       
@@ -347,14 +435,15 @@
 
     function useHint() {
       if (isAnimating) return;
-      let targetIdx = -1;
-      for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { targetIdx = i; break; } }
-      if (targetIdx === -1) return;
+      let wrongIndices = [];
+      for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { wrongIndices.push(i); } }
+      if (wrongIndices.length <= 2) return;
+      const targetIdx = wrongIndices[Math.floor(Math.random() * wrongIndices.length)];
       const needed = targetWord[targetIdx];
       let srcIdx = -1;
       for (let i = 0; i < currentLetters.length; i++) { if (!lockedOrbs[i] && currentLetters[i] === needed && i !== targetIdx) { srcIdx = i; break; } }
       if (srcIdx !== -1) [currentLetters[targetIdx], currentLetters[srcIdx]] = [currentLetters[srcIdx], currentLetters[targetIdx]];
-      lockedOrbs[targetIdx] = true; selectedIndex = null; render(); checkWin();
+      lockedOrbs[targetIdx] = true; selectedIndex = null; render(); checkWinCondition();
     }
 
     function updateWires(di = -1, dx = 0, dy = 0) {
@@ -390,7 +479,7 @@
       if (lockedOrbs[idx]) return;
       if (selectedIndex === null) selectedIndex = idx;
       else if (selectedIndex === idx) selectedIndex = null;
-      else { [currentLetters[selectedIndex], currentLetters[idx]] = [currentLetters[idx], currentLetters[selectedIndex]]; selectedIndex = null; checkWin(); }
+      else { [currentLetters[selectedIndex], currentLetters[idx]] = [currentLetters[idx], currentLetters[selectedIndex]]; selectedIndex = null; checkWinCondition(); }
       render();
     }
 
@@ -398,16 +487,19 @@
       const dropX = orbPositions[di].cx + dx, dropY = orbPositions[di].cy + dy;
       let closest = -1, min = 50;
       orbPositions.forEach((p, i) => { if (i !== di && !lockedOrbs[i]) { const d = Math.hypot(dropX - p.cx, dropY - p.cy); if (d < min) { min = d; closest = i; } } });
-      if (closest !== -1) { [currentLetters[di], currentLetters[closest]] = [currentLetters[closest], currentLetters[di]]; checkWin(); }
+      if (closest !== -1) { [currentLetters[di], currentLetters[closest]] = [currentLetters[closest], currentLetters[di]]; checkWinCondition(); }
       render();
     }
 
     function render() {
       orbs.forEach((d, i) => { d.textContent = currentLetters[i]; d.className = `dot ${lockedOrbs[i] ? 'locked' : ''} ${i === selectedIndex ? 'selected' : ''}`; });
       guessDisplay.textContent = currentLetters.join('');
+      let wrongIndices = [];
+      for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { wrongIndices.push(i); } }
+      hintBtn.disabled = wrongIndices.length <= 2;
     }
 
-    function checkWin() {
+    function checkWinCondition() {
       if (currentLetters.join('') === targetWord) {
         isAnimating = true;
         guessDisplay.style.color = "#2ecc71";
@@ -418,13 +510,31 @@
           setTimeout(() => {
             puzzleContainer.classList.remove('solved');
             guessDisplay.style.color = "#3498db";
-            if (currentStage < maxStages) { currentStage++; startLevel(); }
-            else { if (currentDifficulty >= getUnlocked()) setUnlocked(currentDifficulty + 1); showScreen('screen-select'); }
+            updateDifficultySolved();
           }, 1200);
         }, 1000);
       }
     }
 
+    function updateDifficultySolved() {
+      let data = getLevelsSolved();
+      let currentSolved = data[currentDifficulty] || 0;
+      currentSolved++;
+      data[currentDifficulty] = currentSolved;
+      setLevelsSolved(data);
+      
+      const required = getRequiredStages(currentDifficulty);
+      if (currentSolved >= required) {
+        if (currentDifficulty >= getUnlocked()) setUnlocked(currentDifficulty + 1);
+        modalText.textContent = `You've mastered all ${required} patterns for ${currentDifficulty} letters! Prepare for a compounded flow with ${currentDifficulty + 1} letters.`;
+        milestoneModal.classList.add('active');
+        buildLevels();
+      } else {
+        startLevel();
+      }
+    }
+
+    function closeModal() { milestoneModal.classList.remove('active'); showScreen('screen-select'); }
     buildLevels();
   </script>
 </body>
