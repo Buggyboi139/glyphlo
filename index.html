@@ -15,22 +15,29 @@
       --text-main: #ffffff;
       --text-muted: #8b92a5;
       --pastel-grad: linear-gradient(135deg, #ff7eb3 0%, #8b44fc 50%, #00d2ff 100%);
-      --daily-grad: linear-gradient(135deg, #00ff87 0%, #60efff 100%); /* New Cyber Green/Cyan */
+      --daily-grad: linear-gradient(135deg, #00ff87 0%, #60efff 100%);
       --gray-grad: linear-gradient(135deg, #a0a5b5 0%, #4a5065 100%);
       --success: #00f2fe;
     }
 
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
       height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      width: 100vw;
+      /* Prevent pull-to-refresh and rubber-banding */
+      overscroll-behavior: none; 
       background: var(--bg);
       color: var(--text-main);
       font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
       overflow: hidden;
       touch-action: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .top-banner {
@@ -84,25 +91,6 @@
       display: flex;
     }
 
-    .logo {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 30px;
-    }
-
-    .logo-g {
-      fill: none;
-      stroke: url(#lineGrad);
-      stroke-width: 4;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .logo-orb {
-      fill: #00d2ff;
-      filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.5));
-    }
-
     .instructions {
       font-size: clamp(0.9rem, 3vw, 1.1rem);
       color: var(--text-muted);
@@ -133,10 +121,9 @@
       box-shadow: 0 15px 35px rgba(0, 210, 255, 0.4);
     }
 
-    /* Updated Daily Challenge Button Styles */
     .btn-daily {
       background: var(--daily-grad);
-      color: #08080c; /* Dark text on bright neon background */
+      color: #08080c; 
       box-shadow: 0 10px 25px rgba(0, 255, 135, 0.25);
       width: 100%;
       max-width: 320px;
@@ -224,7 +211,6 @@
       text-transform: uppercase;
     }
 
-    /* Updated Timer Badge styling */
     .timer-display {
       position: absolute;
       top: -35px;
@@ -540,11 +526,46 @@
   </div>
 
   <script>
-    const baseSnapAudio = new Audio('generic-click.mp3');
+    // --- GLOBAL SCROLL PREVENTION (Fixes mobile screen moving) ---
+    // Because the game is a single static screen, we can safely disable touchmove globally.
+    document.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+
+
+    // --- ADVANCED MOBILE AUDIO POOL ---
+    // Instead of cloning a node (which iOS blocks), we preload a small pool of audio elements.
+    const AUDIO_POOL_SIZE = 5;
+    const audioPool = [];
+    let audioIndex = 0;
+    let audioUnlocked = false;
+
+    for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
+      const audio = new Audio('generic-click.mp3');
+      audio.volume = 0.5;
+      audioPool.push(audio);
+    }
+
+    // iOS requires audio to be "unlocked" by a direct user interaction. 
+    // We silently play and pause the pool on the very first tap on the screen.
+    document.addEventListener('pointerdown', () => {
+      if (!audioUnlocked) {
+        audioPool.forEach(a => {
+          a.play().then(() => {
+            a.pause();
+            a.currentTime = 0;
+          }).catch(e => { /* Ignore auto-play block errors on silent unlock */ });
+        });
+        audioUnlocked = true;
+      }
+    }, { once: true });
+
     function playSnap() {
-      const sound = baseSnapAudio.cloneNode();
-      sound.volume = 0.5; 
-      sound.play().catch(e => console.log("Audio waiting"));
+      if (!audioUnlocked) return;
+      const sound = audioPool[audioIndex];
+      sound.currentTime = 0; // Reset just in case it's still playing
+      sound.play().catch(e => console.log("Audio play prevented:", e));
+      audioIndex = (audioIndex + 1) % AUDIO_POOL_SIZE; // Cycle to the next audio object in the pool
     }
 
     // --- GAME STATE ---
@@ -646,7 +667,6 @@
       playSnap();
       const timeStr = localStorage.getItem('glyphloDailyTime');
       
-      // Fixed spacing with double newlines so apps won't run it all together
       const shareText = `Glyphlo Daily Challenge ⏱️\n\nI solved the 5, 6, and 7-letter sequence in ${timeStr}!\n\nCan you beat my synchronization time?`;
       
       if (navigator.share) {
