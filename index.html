@@ -25,7 +25,6 @@
       padding: 0;
       height: 100vh;
       width: 100vw;
-      /* Prevent pull-to-refresh and rubber-banding */
       overscroll-behavior: none; 
       background: var(--bg);
       color: var(--text-main);
@@ -521,17 +520,21 @@
     let audioUnlocked = false;
 
     // Background music initialization
-    const bgMusic = new Audio('background.mp3');
+    const bgMusic = new Audio('background.wav');
     bgMusic.loop = true;
     bgMusic.volume = 0.5;
 
+    // Win sound initialization
+    const winAudio = new Audio('win.wav');
+    winAudio.volume = 0.5;
+
     for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
       const gAudio = new Audio('generic-click.wav');
-      gAudio.volume = 0.25; // 25% global volume
+      gAudio.volume = 0.5; 
       gameAudioPool.push(gAudio);
 
       const mAudio = new Audio('menu.wav');
-      mAudio.volume = 0.25; // 25% global volume
+      mAudio.volume = 0.5; 
       menuAudioPool.push(mAudio);
     }
 
@@ -553,9 +556,28 @@
             a.currentTime = 0;
           }).catch(e => { });
         });
+
+        winAudio.play().then(() => {
+          winAudio.pause();
+          winAudio.currentTime = 0;
+        }).catch(e => { });
+
         audioUnlocked = true;
       }
     }, { once: true });
+
+    // --- VISIBILITY CHANGE API (PAUSE AUDIO WHEN BACKGROUNDED) ---
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        bgMusic.pause();
+        winAudio.pause();
+      } else {
+        // Only resume if the user has already unlocked the audio
+        if (audioUnlocked) {
+          bgMusic.play().catch(e => console.log("Bg music resume blocked", e));
+        }
+      }
+    });
 
     function playGameSound() {
       if (!audioUnlocked) return;
@@ -859,6 +881,13 @@
     function checkWinCondition() {
       if (currentLetters.join('') === targetWord) {
         isAnimating = true;
+
+        // Play the Win Sound
+        if (audioUnlocked) {
+          winAudio.currentTime = 0;
+          winAudio.play().catch(e => console.log("Win audio blocked", e));
+        }
+
         guessDisplay.style.color = "var(--success)";
         guessDisplay.style.background = "none";
         guessDisplay.style.webkitBackgroundClip = "border-box";
