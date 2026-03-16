@@ -520,21 +520,21 @@
     let audioUnlocked = false;
 
     // Background music initialization
-    const bgMusic = new Audio('background.wav');
+    const bgMusic = new Audio('background.mp3');
     bgMusic.loop = true;
-    bgMusic.volume = 0.5;
+    bgMusic.volume = 0.25;
 
     // Win sound initialization
     const winAudio = new Audio('win.wav');
-    winAudio.volume = 0.5;
+    winAudio.volume = 0.25;
 
     for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
       const gAudio = new Audio('generic-click.wav');
-      gAudio.volume = 0.5; 
+      gAudio.volume = 0.25; 
       gameAudioPool.push(gAudio);
 
       const mAudio = new Audio('menu.wav');
-      mAudio.volume = 0.5; 
+      mAudio.volume = 0.25; 
       menuAudioPool.push(mAudio);
     }
 
