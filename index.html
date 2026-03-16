@@ -15,7 +15,7 @@
       --text-main: #ffffff;
       --text-muted: #8b92a5;
       --pastel-grad: linear-gradient(135deg, #ff7eb3 0%, #8b44fc 50%, #00d2ff 100%);
-      --gold-grad: linear-gradient(135deg, #ffb142 0%, #ff5252 100%);
+      --daily-grad: linear-gradient(135deg, #00ff87 0%, #60efff 100%); /* New Cyber Green/Cyan */
       --gray-grad: linear-gradient(135deg, #a0a5b5 0%, #4a5065 100%);
       --success: #00f2fe;
     }
@@ -133,9 +133,11 @@
       box-shadow: 0 15px 35px rgba(0, 210, 255, 0.4);
     }
 
-    .btn-gold {
-      background: var(--gold-grad);
-      box-shadow: 0 10px 25px rgba(255, 177, 66, 0.3);
+    /* Updated Daily Challenge Button Styles */
+    .btn-daily {
+      background: var(--daily-grad);
+      color: #08080c; /* Dark text on bright neon background */
+      box-shadow: 0 10px 25px rgba(0, 255, 135, 0.25);
       width: 100%;
       max-width: 320px;
       margin-bottom: 25px;
@@ -143,10 +145,11 @@
       justify-content: center;
       align-items: center;
       gap: 10px;
+      font-weight: 900;
     }
     
-    .btn-gold:hover {
-      box-shadow: 0 15px 35px rgba(255, 82, 82, 0.4);
+    .btn-daily:hover {
+      box-shadow: 0 15px 35px rgba(96, 239, 255, 0.4);
     }
 
     .level-grid {
@@ -221,6 +224,7 @@
       text-transform: uppercase;
     }
 
+    /* Updated Timer Badge styling */
     .timer-display {
       position: absolute;
       top: -35px;
@@ -229,11 +233,11 @@
       font-family: monospace;
       font-size: 1.2rem;
       font-weight: 700;
-      color: var(--success);
-      background: rgba(0, 242, 254, 0.1);
+      color: #00ff87;
+      background: rgba(0, 255, 135, 0.1);
       padding: 4px 12px;
       border-radius: 20px;
-      border: 1px solid rgba(0, 242, 254, 0.3);
+      border: 1px solid rgba(0, 255, 135, 0.3);
       display: none;
     }
 
@@ -440,7 +444,7 @@
     
     .time-highlight {
       font-size: 2.5rem;
-      color: var(--success);
+      color: #00ff87;
       font-weight: 900;
       display: block;
       margin: 15px 0;
@@ -482,7 +486,7 @@
   </div>
 
   <div id="screen-select" class="screen">
-    <button class="btn btn-gold" onclick="startDailyChallenge()">
+    <button class="btn btn-daily" onclick="startDailyChallenge()">
       ⏱️ DAILY CHALLENGE
     </button>
     <div class="level-grid" id="levelGrid"></div>
@@ -522,13 +526,13 @@
 
   <div class="modal-overlay" id="dailyCompleteModal">
     <div class="modal-content">
-      <h2 class="modal-title" style="background: var(--gold-grad); -webkit-background-clip: text;">DAILY CLEARED</h2>
+      <h2 class="modal-title" style="background: var(--daily-grad); -webkit-background-clip: text; color: transparent;">DAILY CLEARED</h2>
       <p class="modal-text">
         Sequence synchronized in:
         <span class="time-highlight" id="dailyTimeText">00:00</span>
       </p>
       <div style="display: flex; flex-direction: column; gap: 15px;">
-        <button class="btn" style="background: var(--gold-grad);" onclick="shareDaily()">Share Result ➦</button>
+        <button class="btn btn-daily" style="margin-bottom: 0;" onclick="shareDaily()">Share Result ➦</button>
         <button class="btn" style="background: var(--surface); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="playSnap(); closeModal('dailyCompleteModal', 'screen-select')">Close</button>
       </div>
     </div>
@@ -625,13 +629,13 @@
       }
 
       isDailyMode = true;
-      currentDifficulty = 5; // Starts at 5 letters
+      currentDifficulty = 5; 
       dailyStartTime = Date.now();
       timerDisplay.style.display = 'block';
       
       clearInterval(timerInterval);
       timerInterval = setInterval(updateTimer, 1000);
-      updateTimer(); // Call immediately to prevent 1-second visual delay
+      updateTimer(); 
 
       showScreen('screen-game');
       startLevel();
@@ -648,7 +652,9 @@
     function shareDaily() {
       playSnap();
       const timeStr = localStorage.getItem('glyphloDailyTime');
-      const shareText = `Glyphlo Daily Challenge ⏱️\nI solved the 5, 6, and 7-letter sequence in ${timeStr}!\nCan you beat my synchronization time?`;
+      
+      // Fixed spacing with double newlines so apps won't run it all together
+      const shareText = `Glyphlo Daily Challenge ⏱️\n\nI solved the 5, 6, and 7-letter sequence in ${timeStr}!\n\nCan you beat my synchronization time?`;
       
       if (navigator.share) {
         navigator.share({
@@ -693,12 +699,11 @@
       orbLayer.innerHTML = ''; 
       wireLayer.querySelectorAll('polygon').forEach(p => p.remove());
       
-      // UI updates based on mode
       if (isDailyMode) {
         timerDisplay.style.display = 'block';
         levelDisplay.textContent = `DAILY ${currentDifficulty - 4} / 3`;
         flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
-        hintBtn.style.display = 'none'; // Optional: disable hints in daily challenge
+        hintBtn.style.display = 'none'; 
       } else {
         timerDisplay.style.display = 'none';
         hintBtn.style.display = 'block';
@@ -868,24 +873,20 @@
       if (isDailyMode) {
         currentDifficulty++;
         if (currentDifficulty > 7) {
-          // Finished the Daily Challenge!
           clearInterval(timerInterval);
           isDailyMode = false;
           
           const finalTimeStr = timerDisplay.textContent;
           document.getElementById('dailyTimeText').textContent = finalTimeStr;
           
-          // Save completion state to prevent re-playing today
           localStorage.setItem('glyphloDailyDate', new Date().toDateString());
           localStorage.setItem('glyphloDailyTime', finalTimeStr);
           
           document.getElementById('dailyCompleteModal').classList.add('active');
         } else {
-          // Next daily puzzle
           startLevel();
         }
       } else {
-        // Normal mode progression
         let data = getLevelsSolved();
         let currentSolved = data[currentDifficulty] || 0;
         currentSolved++;
