@@ -310,17 +310,46 @@
       left: 90%; 
     }
 
-    #defBtn:hover { 
-      color: #00d2ff;
-      border-color: #00d2ff; 
-      transform: translate(-50%, -50%) scale(1.1); 
+    /* Only apply hover effects on actual mouse devices */
+    @media (hover: hover) {
+      #defBtn:hover { 
+        color: #00d2ff;
+        border-color: #00d2ff; 
+        transform: translate(-50%, -50%) scale(1.1); 
+      }
+      
+      #hintBtn:hover { 
+        color: #ffeb3b; 
+        border-color: #ffeb3b; 
+        transform: translate(-50%, -50%) scale(1.1); 
+      }
     }
-    
-    #hintBtn:hover { 
-      color: #ffeb3b; 
-      border-color: #ffeb3b; 
-      transform: translate(-50%, -50%) scale(1.1); 
+
+    /* Temporary pulse animations */
+    @keyframes pulse-def {
+      0% { box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+      30% { 
+        color: #00d2ff; 
+        border-color: #00d2ff; 
+        box-shadow: 0 0 20px rgba(0, 210, 255, 0.8), 0 10px 25px rgba(0,0,0,0.8); 
+        transform: translate(-50%, -50%) scale(1.15); 
+      }
+      100% { box-shadow: 0 10px 25px rgba(0,0,0,0.8); transform: translate(-50%, -50%) scale(1); }
     }
+
+    @keyframes pulse-hint {
+      0% { box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+      30% { 
+        color: #ffeb3b; 
+        border-color: #ffeb3b; 
+        box-shadow: 0 0 20px rgba(255, 235, 59, 0.8), 0 10px 25px rgba(0,0,0,0.8); 
+        transform: translate(-50%, -50%) scale(1.15); 
+      }
+      100% { box-shadow: 0 10px 25px rgba(0,0,0,0.8); transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .pulse-def-active { animation: pulse-def 0.6s ease-out; }
+    .pulse-hint-active { animation: pulse-hint 0.6s ease-out; }
 
     .action-btn:disabled { 
       color: #333; 
@@ -328,16 +357,6 @@
       opacity: 0.5; 
       cursor: not-allowed; 
       transform: translate(-50%, -50%); 
-    }
-
-    .hint-btn {
-      background: none;
-      border: none;
-      color: #00d2ff;
-      font-size: 1.5rem;
-      cursor: pointer;
-      width: 40px;
-      transition: transform 0.2s, opacity 0.2s;
     }
 
     .guess-display {
@@ -895,6 +914,13 @@
 
     function showDefinition() {
       if (isAnimating) return;
+      
+      // Trigger the temporary light blue pulse animation
+      const btn = document.getElementById('defBtn');
+      btn.classList.remove('pulse-def-active');
+      void btn.offsetWidth; // This forces the browser to restart the animation if clicked quickly
+      btn.classList.add('pulse-def-active');
+
       document.getElementById('defText').textContent = `"${currentDefinition}"`;
       document.getElementById('defModal').classList.add('active');
     }
@@ -907,6 +933,13 @@
 
     function useHint() {
       if (isAnimating || isDailyMode) return;
+      
+      // Trigger the temporary yellow pulse animation
+      const btn = document.getElementById('hintBtn');
+      btn.classList.remove('pulse-hint-active');
+      void btn.offsetWidth; // This forces the browser to restart the animation if clicked quickly
+      btn.classList.add('pulse-hint-active');
+
       playGameSound(); 
       let wrongIndices = [];
       for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { wrongIndices.push(i); } }
