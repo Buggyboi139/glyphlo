@@ -275,8 +275,7 @@
 
     .action-btn {
       position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 18%; /* Adjusted upward position to follow the arc */
       background: var(--surface-hover);
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-muted);
@@ -297,19 +296,20 @@
       height: clamp(18px, 5vw, 24px);
     }
 
-    #defBtn { left: -15px; }
-    #hintBtn { right: -15px; }
+    /* Pushed inward to follow the curve of the circle */
+    #defBtn { left: 4%; }
+    #hintBtn { right: 4%; }
 
     #defBtn:hover { 
       color: #00d2ff;
       border-color: #00d2ff; 
-      transform: translateY(-50%) scale(1.1); 
+      transform: scale(1.1); 
     }
     
     #hintBtn:hover { 
       color: #ffeb3b; 
       border-color: #ffeb3b; 
-      transform: translateY(-50%) scale(1.1); 
+      transform: scale(1.1); 
     }
 
     .action-btn:disabled { 
@@ -317,17 +317,7 @@
       border-color: #333; 
       opacity: 0.5; 
       cursor: not-allowed; 
-      transform: translateY(-50%);
-    }
-
-    .hint-btn {
-      background: none;
-      border: none;
-      color: #00d2ff;
-      font-size: 1.5rem;
-      cursor: pointer;
-      width: 40px;
-      transition: transform 0.2s, opacity 0.2s;
+      transform: none; 
     }
 
     .guess-display {
@@ -1080,3 +1070,5 @@
     
     buildLevels();
   </script>
+</body>
+</html>
