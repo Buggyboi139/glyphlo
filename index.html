@@ -74,6 +74,12 @@
       height: clamp(1.8rem, 6vw, 2.5rem);
       width: auto;
       filter: drop-shadow(0 2px 5px rgba(0, 210, 255, 0.4));
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .banner-logo:hover {
+      transform: scale(1.1);
     }
 
     .screen {
@@ -182,7 +188,7 @@
     .game-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       width: 100%;
       max-width: 400px;
       margin-bottom: 30px;
@@ -228,6 +234,8 @@
     }
 
     .header-actions {
+      position: absolute;
+      right: 0;
       display: flex;
       gap: 15px;
     }
@@ -245,20 +253,6 @@
     .hint-btn:disabled {
       color: #333;
       opacity: 0.5;
-    }
-
-    .back-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 1.5rem;
-      cursor: pointer;
-      width: 40px;
-      transition: color 0.2s;
-    }
-
-    .back-btn:hover {
-      color: var(--text-main);
     }
 
     .guess-display {
@@ -285,18 +279,6 @@
       background: var(--surface);
       border-radius: 50%;
       box-shadow: inset 0 0 40px rgba(0,0,0,0.8), 0 20px 50px rgba(0,0,0,0.5);
-    }
-
-    .center-logo {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: clamp(60px, 20vw, 100px);
-      opacity: 0.15;
-      pointer-events: none;
-      z-index: 1;
-      filter: drop-shadow(0 0 15px rgba(139, 68, 252, 0.6));
     }
 
     .game-board::after {
@@ -452,7 +434,7 @@
 
   <div class="top-banner">
     <h2 class="banner-title">
-      <img src="icon-512.png" alt="Logo" class="banner-logo">
+      <img src="icon-512.png" alt="Logo" class="banner-logo" onclick="playMenuSound(); showScreen('screen-select')" title="Back to Menu">
       GLYPHLO
     </h2>
   </div>
@@ -461,7 +443,7 @@
     <img src="icon-512.png" alt="Glyphlo Logo" class="logo" style="width: 140px; height: auto; filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.4));">
     
     <p class="instructions">Words meet motion. Swap the nodes to reveal the hidden pattern, starting from the gray node and reading clockwise.</p>
-    <button class="btn" onclick="playSnap(); showScreen('screen-select')">Begin</button>
+    <button class="btn" onclick="playMenuSound(); showScreen('screen-select')">Begin</button>
   </div>
 
   <div id="screen-select" class="screen">
@@ -474,20 +456,18 @@
   <div id="screen-game" class="screen">
     <div class="game-header">
       <div class="timer-display" id="timerDisplay">00:00</div>
-      <button class="back-btn" onclick="playSnap(); showScreen('screen-select')">⟵</button>
       <div class="header-titles">
         <h1 class="level-text" id="levelDisplay">STAGE 1 / 9</h1>
         <p class="flavor-text" id="flavorDisplay">4 LETTERS</p>
       </div>
       <div class="header-actions">
-        <button class="hint-btn" id="defBtn" onclick="playSnap(); showDefinition()" title="Definition">📖</button>
+        <button class="hint-btn" id="defBtn" onclick="playMenuSound(); showDefinition()" title="Definition">📖</button>
         <button class="hint-btn" id="hintBtn" onclick="useHint()" title="Lock Node">⚡</button>
       </div>
     </div>
     <div class="guess-display" id="guessDisplay"></div> 
     
     <div class="game-board" id="gameBoard">
-      <img src="icon-512.png" alt="Center Logo" class="center-logo">
       <div id="puzzleContainer">
         <svg id="wireLayer"></svg>
         <div id="orbLayer"></div>
@@ -499,7 +479,7 @@
     <div class="modal-content">
       <h2 class="modal-title">SYNCHRONIZED</h2>
       <p class="modal-text" id="modalText"></p>
-      <button class="btn" onclick="playSnap(); closeModal('milestoneModal', 'screen-select')">Proceed</button>
+      <button class="btn" onclick="playMenuSound(); closeModal('milestoneModal', 'screen-select')">Proceed</button>
     </div>
   </div>
 
@@ -512,7 +492,7 @@
       </p>
       <div style="display: flex; flex-direction: column; gap: 15px;">
         <button class="btn btn-daily" style="margin-bottom: 0;" onclick="shareDaily()">Share Result ➦</button>
-        <button class="btn" style="background: var(--surface); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="playSnap(); closeModal('dailyCompleteModal', 'screen-select')">Close</button>
+        <button class="btn" style="background: var(--surface); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="playMenuSound(); closeModal('dailyCompleteModal', 'screen-select')">Close</button>
       </div>
     </div>
   </div>
@@ -521,51 +501,76 @@
     <div class="modal-content">
       <h2 class="modal-title" style="font-size: 1.5rem;">DATA LOG</h2>
       <p class="modal-text" id="defText" style="text-align: left; font-style: italic;">Accessing archives...</p>
-      <button class="btn" style="padding: 10px 30px; font-size: 0.9rem;" onclick="playSnap(); closeModal('defModal')">Dismiss</button>
+      <button class="btn" style="padding: 10px 30px; font-size: 0.9rem;" onclick="playMenuSound(); closeModal('defModal')">Dismiss</button>
     </div>
   </div>
 
   <script>
-    // --- GLOBAL SCROLL PREVENTION (Fixes mobile screen moving) ---
-    // Because the game is a single static screen, we can safely disable touchmove globally.
+    // --- GLOBAL SCROLL PREVENTION ---
     document.addEventListener('touchmove', function(e) {
       e.preventDefault();
     }, { passive: false });
 
 
     // --- ADVANCED MOBILE AUDIO POOL ---
-    // Instead of cloning a node (which iOS blocks), we preload a small pool of audio elements.
     const AUDIO_POOL_SIZE = 5;
-    const audioPool = [];
-    let audioIndex = 0;
+    const gameAudioPool = [];
+    const menuAudioPool = [];
+    let gameAudioIndex = 0;
+    let menuAudioIndex = 0;
     let audioUnlocked = false;
 
+    // Background music initialization
+    const bgMusic = new Audio('background.wav');
+    bgMusic.loop = true;
+    bgMusic.volume = 0.5;
+
     for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
-      const audio = new Audio('generic-click.wav');
-      audio.volume = 0.5;
-      audioPool.push(audio);
+      const gAudio = new Audio('generic-click.wav');
+      gAudio.volume = 0.25; // 25% global volume
+      gameAudioPool.push(gAudio);
+
+      const mAudio = new Audio('menu.wav');
+      mAudio.volume = 0.25; // 25% global volume
+      menuAudioPool.push(mAudio);
     }
 
     // iOS requires audio to be "unlocked" by a direct user interaction. 
-    // We silently play and pause the pool on the very first tap on the screen.
     document.addEventListener('pointerdown', () => {
       if (!audioUnlocked) {
-        audioPool.forEach(a => {
+        bgMusic.play().catch(e => { /* Ignore auto-play block errors on silent unlock */ });
+        
+        gameAudioPool.forEach(a => {
           a.play().then(() => {
             a.pause();
             a.currentTime = 0;
-          }).catch(e => { /* Ignore auto-play block errors on silent unlock */ });
+          }).catch(e => { });
+        });
+        
+        menuAudioPool.forEach(a => {
+          a.play().then(() => {
+            a.pause();
+            a.currentTime = 0;
+          }).catch(e => { });
         });
         audioUnlocked = true;
       }
     }, { once: true });
 
-    function playSnap() {
+    function playGameSound() {
       if (!audioUnlocked) return;
-      const sound = audioPool[audioIndex];
-      sound.currentTime = 0; // Reset just in case it's still playing
+      const sound = gameAudioPool[gameAudioIndex];
+      sound.currentTime = 0;
       sound.play().catch(e => console.log("Audio play prevented:", e));
-      audioIndex = (audioIndex + 1) % AUDIO_POOL_SIZE; // Cycle to the next audio object in the pool
+      gameAudioIndex = (gameAudioIndex + 1) % AUDIO_POOL_SIZE;
+    }
+
+    function playMenuSound() {
+      if (!audioUnlocked) return;
+      const sound = menuAudioPool[menuAudioIndex];
+      sound.currentTime = 0;
+      sound.play().catch(e => console.log("Audio play prevented:", e));
+      menuAudioIndex = (menuAudioIndex + 1) % AUDIO_POOL_SIZE;
     }
 
     // --- GAME STATE ---
@@ -620,7 +625,7 @@
         btn.innerHTML = `<span>${i} LETTERS</span> <span>${i <= unlocked ? '⟼' : '⊘'}</span>`;
         btn.disabled = i > unlocked;
         btn.onclick = () => { 
-          playSnap(); 
+          playMenuSound(); 
           isDailyMode = false;
           currentDifficulty = i; 
           showScreen('screen-game'); 
@@ -632,7 +637,7 @@
 
     // --- DAILY CHALLENGE LOGIC ---
     function startDailyChallenge() {
-      playSnap();
+      playMenuSound();
       const today = new Date().toDateString();
       const completedDate = localStorage.getItem('glyphloDailyDate');
       
@@ -664,7 +669,7 @@
     }
 
     function shareDaily() {
-      playSnap();
+      playMenuSound();
       const timeStr = localStorage.getItem('glyphloDailyTime');
       
       const shareText = `Glyphlo Daily Challenge ⏱️\n\nI solved the 5, 6, and 7-letter sequence in ${timeStr}!\n\nCan you beat my synchronization time?`;
@@ -768,7 +773,7 @@
 
     function useHint() {
       if (isAnimating || isDailyMode) return;
-      playSnap(); 
+      playGameSound(); 
       let wrongIndices = [];
       for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { wrongIndices.push(i); } }
       if (wrongIndices.length <= 2) return;
@@ -812,7 +817,7 @@
 
     function handleTap(idx) {
       if (lockedOrbs[idx]) return;
-      playSnap(); 
+      playGameSound(); 
       if (selectedIndex === null) selectedIndex = idx;
       else if (selectedIndex === idx) selectedIndex = null;
       else { 
@@ -829,7 +834,7 @@
       orbPositions.forEach((p, i) => { if (i !== di && !lockedOrbs[i]) { const d = Math.hypot(dropX - p.cx, dropY - p.cy); if (d < min) { min = d; closest = i; } } });
       
       if (closest !== -1) { 
-        playSnap(); 
+        playGameSound(); 
         [currentLetters[di], currentLetters[closest]] = [currentLetters[closest], currentLetters[di]]; 
         checkWinCondition(); 
       }
