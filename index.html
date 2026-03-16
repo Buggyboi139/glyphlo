@@ -300,22 +300,22 @@
       height: clamp(18px, 5vw, 24px);
     }
 
+    /* Pushed outside the 0-100% boundary of the game board */
     #defBtn { 
-      top: 20%; 
-      left: 10%; 
+      top: 10%; 
+      left: -5%; 
     }
     
     #hintBtn { 
-      top: 20%; 
-      left: 90%; 
+      top: 10%; 
+      left: 105%; 
     }
 
     #muteBtn {
-      top: 95%;
+      top: 105%;
       left: 50%;
     }
 
-    /* Only apply hover effects on actual mouse devices */
     @media (hover: hover) {
       #defBtn:hover { 
         color: #00d2ff;
@@ -336,7 +336,6 @@
       }
     }
 
-    /* Temporary pulse animations */
     @keyframes pulse-def {
       0% { box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
       30% { 
@@ -732,22 +731,12 @@
       
       if (isMuted) {
         bgMusic.volume = 0;
-        winAudio.volume = 0;
-        gameAudioPool.forEach(a => a.volume = 0);
-        menuAudioPool.forEach(a => a.volume = 0);
-        
-        // Change to 'volume-x' icon
         muteIcon.innerHTML = `
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
           <line x1="23" y1="1" x2="1" y2="23"></line>
         `;
       } else {
         bgMusic.volume = 0.25;
-        winAudio.volume = 0.25;
-        gameAudioPool.forEach(a => a.volume = 0.25);
-        menuAudioPool.forEach(a => a.volume = 0.25);
-        
-        // Change to 'volume-2' icon
         muteIcon.innerHTML = `
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -757,7 +746,7 @@
     }
 
     function playGameSound() {
-      if (!audioUnlocked || isMuted) return;
+      if (!audioUnlocked) return;
       const sound = gameAudioPool[gameAudioIndex];
       sound.currentTime = 0;
       sound.play().catch(e => { });
@@ -765,7 +754,7 @@
     }
 
     function playMenuSound() {
-      if (!audioUnlocked || isMuted) return;
+      if (!audioUnlocked) return;
       const sound = menuAudioPool[menuAudioIndex];
       sound.currentTime = 0;
       sound.play().catch(e => { });
