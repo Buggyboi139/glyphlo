@@ -630,33 +630,6 @@
         }
       }
     });
-        
-        menuAudioPool.forEach(a => {
-          a.play().then(() => {
-            a.pause();
-            a.currentTime = 0;
-          }).catch(e => { });
-        });
-
-        winAudio.play().then(() => {
-          winAudio.pause();
-          winAudio.currentTime = 0;
-        }).catch(e => { });
-
-        audioUnlocked = true;
-      }
-    }, { once: true });
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        bgMusic.pause();
-        winAudio.pause();
-      } else {
-        if (audioUnlocked) {
-          bgMusic.play().catch(e => { });
-        }
-      }
-    });
 
     function playGameSound() {
       if (!audioUnlocked) return;
@@ -1058,5 +1031,3 @@
     
     buildLevels();
   </script>
-</body>
-</html>
