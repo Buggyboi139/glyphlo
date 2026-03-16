@@ -266,11 +266,58 @@
       display: none;
     }
 
-    .header-actions {
-      position: absolute;
-      right: 0;
+    .board-wrapper {
+      position: relative;
       display: flex;
-      gap: 15px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--surface-hover);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      width: clamp(40px, 12vw, 50px);
+      height: clamp(40px, 12vw, 50px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      transition: all 0.2s ease;
+      z-index: 20;
+    }
+
+    .action-btn svg {
+      width: clamp(18px, 5vw, 24px);
+      height: clamp(18px, 5vw, 24px);
+    }
+
+    #defBtn { left: -15px; }
+    #hintBtn { right: -15px; }
+
+    #defBtn:hover { 
+      color: #00d2ff;
+      border-color: #00d2ff; 
+      transform: translateY(-50%) scale(1.1); 
+    }
+    
+    #hintBtn:hover { 
+      color: #ffeb3b; 
+      border-color: #ffeb3b; 
+      transform: translateY(-50%) scale(1.1); 
+    }
+
+    .action-btn:disabled { 
+      color: #333; 
+      border-color: #333; 
+      opacity: 0.5; 
+      cursor: not-allowed; 
+      transform: translateY(-50%);
     }
 
     .hint-btn {
@@ -281,11 +328,6 @@
       cursor: pointer;
       width: 40px;
       transition: transform 0.2s, opacity 0.2s;
-    }
-
-    .hint-btn:disabled {
-      color: #333;
-      opacity: 0.5;
     }
 
     .guess-display {
@@ -522,18 +564,25 @@
         <h1 class="level-text" id="levelDisplay">STAGE 1 / 9</h1>
         <p class="flavor-text" id="flavorDisplay">4 LETTERS</p>
       </div>
-      <div class="header-actions">
-        <button class="hint-btn" id="defBtn" onclick="playMenuSound(); showDefinition()" title="Definition">📖</button>
-        <button class="hint-btn" id="hintBtn" onclick="useHint()" title="Lock Node">⚡</button>
-      </div>
     </div>
+    
     <div class="guess-display" id="guessDisplay"></div> 
     
-    <div class="game-board" id="gameBoard">
-      <div id="puzzleContainer">
-        <svg id="wireLayer"></svg>
-        <div id="orbLayer"></div>
+    <div class="board-wrapper">
+      <button class="action-btn" id="defBtn" onclick="playMenuSound(); showDefinition()" title="Definition">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      </button>
+
+      <div class="game-board" id="gameBoard">
+        <div id="puzzleContainer">
+          <svg id="wireLayer"></svg>
+          <div id="orbLayer"></div>
+        </div>
       </div>
+
+      <button class="action-btn" id="hintBtn" onclick="useHint()" title="Lock Node">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </button>
     </div>
   </div>
 
@@ -792,7 +841,7 @@
         timerDisplay.style.display = 'block';
         levelDisplay.textContent = `DAILY ${currentDifficulty - 4} / 3`;
         flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
-        hintBtn.style.display = 'none'; 
+        hintBtn.style.display = 'flex'; 
       } else {
         timerDisplay.style.display = 'none';
         hintBtn.style.display = 'block';
