@@ -95,8 +95,20 @@
       box-sizing: border-box;
     }
 
+    @keyframes screenFade {
+      from { 
+        opacity: 0; 
+        transform: translateY(15px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+
     .screen.active {
       display: flex;
+      animation: screenFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .instructions {
@@ -347,14 +359,45 @@
       background: var(--gray-grad);
       box-shadow: 0 10px 20px rgba(0,0,0,0.6), inset 0 0 15px rgba(255,255,255,0.1);
     }
+    
+    @keyframes breatheNormal {
+      0%, 100% {
+        transform: scale(1.15);
+        box-shadow: 0 0 30px rgba(255, 126, 179, 0.8);
+      }
+      50% {
+        transform: scale(1.25);
+        box-shadow: 0 0 50px rgba(255, 126, 179, 1);
+      }
+    }
+
+    @keyframes breatheStart {
+      0%, 100% {
+        transform: scale(1.15);
+        box-shadow: 0 0 30px rgba(160, 165, 181, 0.8);
+      }
+      50% {
+        transform: scale(1.25);
+        box-shadow: 0 0 50px rgba(160, 165, 181, 1);
+      }
+    }
 
     .dot.selected {
-      transform: scale(1.15);
-      box-shadow: 0 0 30px rgba(255, 126, 179, 0.8);
+      animation: breatheNormal 1.5s ease-in-out infinite;
     }
 
     .dot.start-node.selected {
-      box-shadow: 0 0 30px rgba(160, 165, 181, 0.8);
+      animation: breatheStart 1.5s ease-in-out infinite;
+    }
+
+    @keyframes letterPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
+      100% { transform: scale(1); }
+    }
+
+    .dot.swapped {
+      animation: letterPop 0.3s ease-out;
     }
 
     .dot.locked {
@@ -510,7 +553,6 @@
       e.preventDefault();
     }, { passive: false });
 
-
     const AUDIO_POOL_SIZE = 5;
     const gameAudioPool = [];
     const menuAudioPool = [];
@@ -537,7 +579,7 @@
 
     document.addEventListener('pointerdown', () => {
       if (!audioUnlocked) {
-        bgMusic.play().catch(e => { /* Ignore auto-play block errors on silent unlock */ });
+        bgMusic.play().catch(e => { });
         
         gameAudioPool.forEach(a => {
           a.play().then(() => {
@@ -568,7 +610,7 @@
         winAudio.pause();
       } else {
         if (audioUnlocked) {
-          bgMusic.play().catch(e => console.log("Bg music resume blocked", e));
+          bgMusic.play().catch(e => { });
         }
       }
     });
@@ -577,7 +619,7 @@
       if (!audioUnlocked) return;
       const sound = gameAudioPool[gameAudioIndex];
       sound.currentTime = 0;
-      sound.play().catch(e => console.log("Audio play prevented:", e));
+      sound.play().catch(e => { });
       gameAudioIndex = (gameAudioIndex + 1) % AUDIO_POOL_SIZE;
     }
 
@@ -585,7 +627,7 @@
       if (!audioUnlocked) return;
       const sound = menuAudioPool[menuAudioIndex];
       sound.currentTime = 0;
-      sound.play().catch(e => console.log("Audio play prevented:", e));
+      sound.play().catch(e => { });
       menuAudioIndex = (menuAudioIndex + 1) % AUDIO_POOL_SIZE;
     }
 
@@ -691,7 +733,7 @@
         navigator.share({
           title: 'Glyphlo Daily',
           text: shareText
-        }).catch(err => console.log('Share canceled or failed', err));
+        }).catch(err => { });
       } else {
         navigator.clipboard.writeText(shareText);
         alert("Result copied to clipboard!");
@@ -841,6 +883,11 @@
       else if (selectedIndex === idx) selectedIndex = null;
       else { 
         [currentLetters[selectedIndex], currentLetters[idx]] = [currentLetters[idx], currentLetters[selectedIndex]]; 
+        orbs[selectedIndex].classList.add('swapped');
+        orbs[idx].classList.add('swapped');
+        setTimeout(() => {
+          orbs.forEach(orb => orb.classList.remove('swapped'));
+        }, 300);
         selectedIndex = null; 
         checkWinCondition(); 
       }
@@ -855,6 +902,11 @@
       if (closest !== -1) { 
         playGameSound(); 
         [currentLetters[di], currentLetters[closest]] = [currentLetters[closest], currentLetters[di]]; 
+        orbs[di].classList.add('swapped');
+        orbs[closest].classList.add('swapped');
+        setTimeout(() => {
+          orbs.forEach(orb => orb.classList.remove('swapped'));
+        }, 300);
         checkWinCondition(); 
       }
       render();
@@ -881,7 +933,7 @@
 
         if (audioUnlocked) {
           winAudio.currentTime = 0;
-          winAudio.play().catch(e => console.log("Win audio blocked", e));
+          winAudio.play().catch(e => { });
         }
 
         guessDisplay.style.color = "var(--success)";
@@ -956,8 +1008,8 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('ServiceWorker registered'))
-          .catch(err => console.log('ServiceWorker failed: ', err));
+          .then(reg => { })
+          .catch(err => { });
       });
     }
     
