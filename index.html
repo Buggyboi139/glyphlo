@@ -310,6 +310,11 @@
       left: 90%; 
     }
 
+    #muteBtn {
+      top: 95%;
+      left: 50%;
+    }
+
     /* Only apply hover effects on actual mouse devices */
     @media (hover: hover) {
       #defBtn:hover { 
@@ -322,6 +327,12 @@
         color: #ffeb3b; 
         border-color: #ffeb3b; 
         transform: translate(-50%, -50%) scale(1.1); 
+      }
+
+      #muteBtn:hover {
+        color: #ff7eb3;
+        border-color: #ff7eb3;
+        transform: translate(-50%, -50%) scale(1.1);
       }
     }
 
@@ -610,6 +621,13 @@
       <button class="action-btn" id="hintBtn" onclick="useHint()" title="Lock Node">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
       </button>
+
+      <button class="action-btn" id="muteBtn" onclick="toggleMute()" title="Toggle Audio">
+        <svg id="muteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -654,6 +672,7 @@
     let gameAudioIndex = 0;
     let menuAudioIndex = 0;
     let audioUnlocked = false;
+    let isMuted = false;
 
     const bgMusic = new Audio('background.mp3');
     bgMusic.loop = true;
@@ -674,7 +693,7 @@
 
     const unlockAudio = () => {
       if (!audioUnlocked) {
-        bgMusic.play().catch(e => { });
+        if (!isMuted) bgMusic.play().catch(e => { });
         
         gameAudioPool.forEach(a => {
           a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(e => { });
@@ -701,14 +720,44 @@
         bgMusic.pause();
         winAudio.pause();
       } else {
-        if (audioUnlocked) {
+        if (audioUnlocked && !isMuted) {
           bgMusic.play().catch(e => { });
         }
       }
     });
 
+    function toggleMute() {
+      isMuted = !isMuted;
+      const muteIcon = document.getElementById('muteIcon');
+      
+      if (isMuted) {
+        bgMusic.volume = 0;
+        winAudio.volume = 0;
+        gameAudioPool.forEach(a => a.volume = 0);
+        menuAudioPool.forEach(a => a.volume = 0);
+        
+        // Change to 'volume-x' icon
+        muteIcon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="1" x2="1" y2="23"></line>
+        `;
+      } else {
+        bgMusic.volume = 0.25;
+        winAudio.volume = 0.25;
+        gameAudioPool.forEach(a => a.volume = 0.25);
+        menuAudioPool.forEach(a => a.volume = 0.25);
+        
+        // Change to 'volume-2' icon
+        muteIcon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        `;
+        if (audioUnlocked) bgMusic.play().catch(e => {});
+      }
+    }
+
     function playGameSound() {
-      if (!audioUnlocked) return;
+      if (!audioUnlocked || isMuted) return;
       const sound = gameAudioPool[gameAudioIndex];
       sound.currentTime = 0;
       sound.play().catch(e => { });
@@ -716,7 +765,7 @@
     }
 
     function playMenuSound() {
-      if (!audioUnlocked) return;
+      if (!audioUnlocked || isMuted) return;
       const sound = menuAudioPool[menuAudioIndex];
       sound.currentTime = 0;
       sound.play().catch(e => { });
@@ -1037,7 +1086,7 @@
       if (currentLetters.join('') === targetWord) {
         isAnimating = true;
 
-        if (audioUnlocked) {
+        if (audioUnlocked && !isMuted) {
           winAudio.currentTime = 0;
           winAudio.play().catch(e => { });
         }
