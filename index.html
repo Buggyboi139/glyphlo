@@ -12,6 +12,7 @@
       --text-main: #ffffff;
       --text-muted: #8b92a5;
       --pastel-grad: linear-gradient(135deg, #ff7eb3 0%, #8b44fc 50%, #00d2ff 100%);
+      --gray-grad: linear-gradient(135deg, #a0a5b5 0%, #4a5065 100%);
       --success: #00f2fe;
     }
 
@@ -189,6 +190,11 @@
       text-transform: uppercase;
     }
 
+    .header-actions {
+      display: flex;
+      gap: 15px;
+    }
+
     .hint-btn {
       background: none;
       border: none;
@@ -196,7 +202,7 @@
       font-size: 1.5rem;
       cursor: pointer;
       width: 40px;
-      transition: transform 0.2s;
+      transition: transform 0.2s, opacity 0.2s;
     }
 
     .hint-btn:disabled {
@@ -302,9 +308,18 @@
       touch-action: none;
     }
 
+    .dot.start-node {
+      background: var(--gray-grad);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.6), inset 0 0 15px rgba(255,255,255,0.1);
+    }
+
     .dot.selected {
       transform: scale(1.15);
       box-shadow: 0 0 30px rgba(255, 126, 179, 0.8);
+    }
+
+    .dot.start-node.selected {
+      box-shadow: 0 0 30px rgba(160, 165, 181, 0.8);
     }
 
     .dot.locked {
@@ -389,7 +404,7 @@
       <path class="logo-g" d="M 50 10 C 70 20 80 30 90 50" />
       <path class="logo-g" d="M 90 50 C 80 70 70 80 50 90" />
     </svg>
-    <p class="instructions">Minimalism meets motion. Swap the nodes to reveal the hidden pattern, reading clockwise.</p>
+    <p class="instructions">Minimalism meets motion. Swap the nodes to reveal the hidden pattern, starting from the gray catalyst and reading clockwise.</p>
     <button class="btn" onclick="showScreen('screen-select')">Initiate</button>
   </div>
 
@@ -401,10 +416,13 @@
     <div class="game-header">
       <button class="back-btn" onclick="showScreen('screen-select')">⟵</button>
       <div class="header-titles">
-        <h1 class="level-text" id="levelDisplay">STAGE 1 / 6</h1>
-        <p class="flavor-text" id="flavorDisplay">3 LETTERS</p>
+        <h1 class="level-text" id="levelDisplay">STAGE 1 / 9</h1>
+        <p class="flavor-text" id="flavorDisplay">4 LETTERS</p>
       </div>
-      <button class="hint-btn" id="hintBtn" onclick="useHint()">⚡</button>
+      <div class="header-actions">
+        <button class="hint-btn" id="defBtn" onclick="showDefinition()" title="Definition">📖</button>
+        <button class="hint-btn" id="hintBtn" onclick="useHint()" title="Lock Node">⚡</button>
+      </div>
     </div>
     <div class="guess-display" id="guessDisplay"></div> 
     <div class="game-board" id="gameBoard">
@@ -419,13 +437,22 @@
     <div class="modal-content">
       <h2 class="modal-title">SYNCHRONIZED</h2>
       <p class="modal-text" id="modalText"></p>
-      <button class="btn" onclick="closeModal()">Proceed</button>
+      <button class="btn" onclick="closeModal('milestoneModal', 'screen-select')">Proceed</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="defModal">
+    <div class="modal-content">
+      <h2 class="modal-title" style="font-size: 1.5rem;">DATA LOG</h2>
+      <p class="modal-text" id="defText" style="text-align: left; font-style: italic;">Accessing archives...</p>
+      <button class="btn" style="padding: 10px 30px; font-size: 0.9rem;" onclick="closeModal('defModal')">Dismiss</button>
     </div>
   </div>
 
   <script>
-    let currentDifficulty = 3;
+    let currentDifficulty = 4;
     let targetWord = "";
+    let currentDefinition = "";
     let currentLetters = [];
     let lockedOrbs = [];
     let orbs = [], orbPositions = [];
@@ -440,12 +467,12 @@
     const flavorDisplay = document.getElementById('flavorDisplay');
     const guessDisplay = document.getElementById('guessDisplay');
     const hintBtn = document.getElementById('hintBtn');
+    const defBtn = document.getElementById('defBtn');
     const gameBoard = document.getElementById('gameBoard');
-    const milestoneModal = document.getElementById('milestoneModal');
-    const modalText = document.getElementById('modalText');
-
+    
+    // Start baseline at 4
     function getRequiredStages(letterCount) { return (letterCount - 1) * 3; }
-    function getUnlocked() { return parseInt(localStorage.getItem('glyphloUnlocked')) || 3; }
+    function getUnlocked() { return parseInt(localStorage.getItem('glyphloUnlocked')) || 4; }
     function setUnlocked(lvl) { localStorage.setItem('glyphloUnlocked', lvl); }
     function getLevelsSolved() { try { return JSON.parse(localStorage.getItem('glyphloLevelsSolved')) || {}; } catch (e) { return {}; } }
     function setLevelsSolved(data) { localStorage.setItem('glyphloLevelsSolved', JSON.stringify(data)); }
@@ -459,7 +486,7 @@
     function buildLevels() {
       const grid = document.getElementById('levelGrid'), unlocked = getUnlocked();
       grid.innerHTML = '';
-      for (let i = 3; i <= 7; i++) {
+      for (let i = 4; i <= 8; i++) { // Shifted up by 1 to maintain 5 tiers
         const btn = document.createElement('button');
         btn.className = `level-btn ${i <= unlocked ? 'unlocked' : ''}`;
         btn.innerHTML = `<span>${i} LETTERS</span> <span>${i <= unlocked ? '⟼' : '⊘'}</span>`;
@@ -469,13 +496,31 @@
       }
     }
 
+    async function fetchDefinition(word) {
+      currentDefinition = "Searching archives...";
+      try {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+        if (!res.ok) throw new Error("Not found");
+        const data = await res.json();
+        // Grab the first available definition
+        currentDefinition = data[0].meanings[0].definitions[0].definition;
+      } catch (e) {
+        currentDefinition = "Definition encrypted or unavailable for this sequence.";
+      }
+    }
+
     async function fetchWord(len) {
       try {
         const r = await fetch(`https://random-word-api.herokuapp.com/word?length=${len}`);
         const d = await r.json();
-        return d[0].toUpperCase();
+        const word = d[0].toUpperCase();
+        fetchDefinition(word); // Kick off def fetch in background
+        return word;
       } catch (e) {
-        return {3:"SUN",4:"FLOW",5:"GLYPH",6:"SYSTEM",7:"DYNAMIC"}[len];
+        const fallbacks = {4:"FLOW",5:"GLYPH",6:"SYSTEM",7:"DYNAMIC",8:"STARDUST"};
+        const word = fallbacks[len] || "ERROR";
+        fetchDefinition(word);
+        return word;
       }
     }
 
@@ -503,11 +548,14 @@
       orbPositions = []; orbs = [];
 
       for (let i = 0; i < n; i++) {
-        const a = (i * 2 * Math.PI) / n - (Math.PI / 2);
+        const a = (i * 2 * Math.PI) / n - (Math.PI / 2); // -PI/2 is the top point
         const px = cx + radius * Math.cos(a), py = cy + radius * Math.sin(a);
         orbPositions.push({ cx: px, cy: py });
         const dot = document.createElement('div');
-        dot.className = 'dot';
+        
+        // Add start-node class strictly to the 12 o'clock position (index 0)
+        dot.className = `dot ${i === 0 ? 'start-node' : ''}`;
+        
         dot.style.left = `${px - dotSize / 2}px`; dot.style.top = `${py - dotSize / 2}px`;
         setupInteraction(dot, i);
         orbLayer.appendChild(dot);
@@ -518,6 +566,12 @@
       poly.setAttribute('stroke-width', '3');
       wireLayer.appendChild(poly);
       updateWires(); render();
+    }
+
+    function showDefinition() {
+      if (isAnimating) return;
+      document.getElementById('defText').textContent = `"${currentDefinition}"`;
+      document.getElementById('defModal').classList.add('active');
     }
 
     function useHint() {
@@ -580,7 +634,15 @@
     }
 
     function render() {
-      orbs.forEach((d, i) => { d.textContent = currentLetters[i]; d.className = `dot ${lockedOrbs[i] ? 'locked' : ''} ${i === selectedIndex ? 'selected' : ''}`; });
+      orbs.forEach((d, i) => { 
+        d.textContent = currentLetters[i]; 
+        // Re-apply classes cleanly to keep start-node visible unless locked
+        let classes = 'dot';
+        if (i === 0) classes += ' start-node';
+        if (lockedOrbs[i]) classes += ' locked';
+        if (i === selectedIndex) classes += ' selected';
+        d.className = classes; 
+      });
       guessDisplay.textContent = currentLetters.join('');
       let wrongIndices = [];
       for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { wrongIndices.push(i); } }
@@ -628,15 +690,19 @@
       const required = getRequiredStages(currentDifficulty);
       if (currentSolved >= required) {
         if (currentDifficulty >= getUnlocked()) setUnlocked(currentDifficulty + 1);
-        modalText.textContent = `Pattern complete. System upgraded to ${currentDifficulty + 1} letter sequence.`;
-        milestoneModal.classList.add('active');
+        document.getElementById('modalText').textContent = `Pattern complete. System upgraded to ${currentDifficulty + 1} letter sequence.`;
+        document.getElementById('milestoneModal').classList.add('active');
         buildLevels();
       } else {
         startLevel();
       }
     }
 
-    function closeModal() { milestoneModal.classList.remove('active'); showScreen('screen-select'); }
+    function closeModal(modalId, nextScreenId = null) { 
+      document.getElementById(modalId).classList.remove('active'); 
+      if(nextScreenId) showScreen(nextScreenId); 
+    }
+    
     buildLevels();
   </script>
 </body>
