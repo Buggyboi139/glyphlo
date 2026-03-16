@@ -52,7 +52,7 @@
       left: 0; 
       right: 0; 
       bottom: 0;
-      border: 4px solid transparent;
+      border: 2px solid transparent;
       background: var(--pastel-grad) border-box;
       -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
@@ -619,13 +619,17 @@
 
     document.addEventListener('click', unlockAudio);
     document.addEventListener('touchstart', unlockAudio, { passive: true });
-        
-        gameAudioPool.forEach(a => {
-          a.play().then(() => {
-            a.pause();
-            a.currentTime = 0;
-          }).catch(e => { });
-        });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        bgMusic.pause();
+        winAudio.pause();
+      } else {
+        if (audioUnlocked) {
+          bgMusic.play().catch(e => { });
+        }
+      }
+    });
         
         menuAudioPool.forEach(a => {
           a.play().then(() => {
