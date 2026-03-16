@@ -23,8 +23,11 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100vh;
-      width: 100vw;
+      height: 100%;
+      width: 100%;
+      position: fixed; 
+      top: 0;
+      left: 0;
       overscroll-behavior: none; 
       background: var(--bg);
       color: var(--text-main);
@@ -46,7 +49,9 @@
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       padding: 15px 0;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       position: absolute;
       top: 0;
       left: 0;
@@ -63,10 +68,6 @@
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 15px;
     }
 
     .banner-logo {
@@ -75,6 +76,8 @@
       filter: drop-shadow(0 2px 5px rgba(0, 210, 255, 0.4));
       cursor: pointer;
       transition: transform 0.2s;
+      position: absolute; 
+      left: 20px; 
     }
     
     .banner-logo:hover {
@@ -432,10 +435,8 @@
   </svg>
 
   <div class="top-banner">
-    <h2 class="banner-title">
-      <img src="icon-512.png" alt="Logo" class="banner-logo" onclick="playMenuSound(); showScreen('screen-select')" title="Back to Menu">
-      GLYPHLO
-    </h2>
+    <img src="icon-512.png" alt="Logo" class="banner-logo" onclick="playMenuSound(); showScreen('screen-select')" title="Back to Menu">
+    <h2 class="banner-title">GLYPHLO</h2>
   </div>
 
   <div id="screen-intro" class="screen active">
@@ -505,13 +506,11 @@
   </div>
 
   <script>
-    // --- GLOBAL SCROLL PREVENTION ---
     document.addEventListener('touchmove', function(e) {
       e.preventDefault();
     }, { passive: false });
 
 
-    // --- ADVANCED MOBILE AUDIO POOL ---
     const AUDIO_POOL_SIZE = 5;
     const gameAudioPool = [];
     const menuAudioPool = [];
@@ -519,12 +518,10 @@
     let menuAudioIndex = 0;
     let audioUnlocked = false;
 
-    // Background music initialization
     const bgMusic = new Audio('background.mp3');
     bgMusic.loop = true;
     bgMusic.volume = 0.25;
 
-    // Win sound initialization
     const winAudio = new Audio('win.wav');
     winAudio.volume = 0.25;
 
@@ -538,7 +535,6 @@
       menuAudioPool.push(mAudio);
     }
 
-    // iOS requires audio to be "unlocked" by a direct user interaction. 
     document.addEventListener('pointerdown', () => {
       if (!audioUnlocked) {
         bgMusic.play().catch(e => { /* Ignore auto-play block errors on silent unlock */ });
@@ -566,13 +562,11 @@
       }
     }, { once: true });
 
-    // --- VISIBILITY CHANGE API (PAUSE AUDIO WHEN BACKGROUNDED) ---
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         bgMusic.pause();
         winAudio.pause();
       } else {
-        // Only resume if the user has already unlocked the audio
         if (audioUnlocked) {
           bgMusic.play().catch(e => console.log("Bg music resume blocked", e));
         }
@@ -595,7 +589,6 @@
       menuAudioIndex = (menuAudioIndex + 1) % AUDIO_POOL_SIZE;
     }
 
-    // --- GAME STATE ---
     let currentDifficulty = 4;
     let targetWord = "";
     let currentDefinition = "";
@@ -606,7 +599,6 @@
     let activeDragIndex = null, isDragging = false;
     let startPointerX = 0, startPointerY = 0, currentTranslateX = 0, currentTranslateY = 0;
 
-    // --- DAILY CHALLENGE STATE ---
     let isDailyMode = false;
     let dailyStartTime = 0;
     let timerInterval = null;
@@ -657,7 +649,6 @@
       }
     }
 
-    // --- DAILY CHALLENGE LOGIC ---
     function startDailyChallenge() {
       playMenuSound();
       const today = new Date().toDateString();
@@ -793,6 +784,12 @@
       document.getElementById('defModal').classList.add('active');
     }
 
+    function triggerHaptic(pattern) {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(pattern);
+      }
+    }
+
     function useHint() {
       if (isAnimating || isDailyMode) return;
       playGameSound(); 
@@ -882,7 +879,6 @@
       if (currentLetters.join('') === targetWord) {
         isAnimating = true;
 
-        // Play the Win Sound
         if (audioUnlocked) {
           winAudio.currentTime = 0;
           winAudio.play().catch(e => console.log("Win audio blocked", e));
