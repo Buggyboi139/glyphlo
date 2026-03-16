@@ -841,10 +841,10 @@
         timerDisplay.style.display = 'block';
         levelDisplay.textContent = `DAILY ${currentDifficulty - 4} / 3`;
         flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
-        hintBtn.style.display = 'flex'; 
+        hintBtn.style.display = 'none'; // Hides the hint button in Daily mode
       } else {
         timerDisplay.style.display = 'none';
-        hintBtn.style.display = 'block';
+        hintBtn.style.display = 'flex'; // Properly centers the SVG in normal mode
         const solved = getLevelsSolved()[currentDifficulty] || 0;
         levelDisplay.textContent = `STAGE ${solved + 1} / ${getRequiredStages(currentDifficulty)}`;
         flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
