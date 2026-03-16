@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,6 +11,14 @@
   <meta name="theme-color" content="#08080c">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
+    /* iOS Web App Optimizations */
+    * {
+      -webkit-touch-callout: none; /* Disable iOS magnifying glass / context menu */
+      -webkit-user-select: none; /* Disable text highlighting */
+      user-select: none;
+      -webkit-tap-highlight-color: transparent; /* Remove native tap flash */
+    }
+
     :root {
       --bg: #08080c;
       --surface: #12131c;
@@ -67,7 +75,8 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 15px 0;
+      /* Added iOS safe area support so the notch doesn't overlap */
+      padding: calc(15px + env(safe-area-inset-top)) 0 15px 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -97,6 +106,8 @@
       transition: transform 0.2s;
       position: absolute; 
       left: 20px; 
+      /* Account for notch on sideways orientation */
+      margin-left: env(safe-area-inset-left);
     }
     
     .banner-logo:hover {
@@ -110,7 +121,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 80px 20px 20px 20px;
+      /* Added bottom safe area to clear iOS home bar */
+      padding: 80px 20px calc(20px + env(safe-area-inset-bottom)) 20px;
       box-sizing: border-box;
     }
 
@@ -300,19 +312,20 @@
       height: clamp(18px, 5vw, 24px);
     }
 
-    /* Pushed outside the 0-100% boundary of the game board */
+    /* Pulled inwards to hug the interior edge just slightly more */
     #defBtn { 
-      top: 10%; 
-      left: -5%; 
+      top: 12%; 
+      left: 4%; 
     }
     
     #hintBtn { 
-      top: 10%; 
-      left: 105%; 
+      top: 12%; 
+      left: 96%; 
     }
 
+    /* Dropped down further to clear the bottom node completely */
     #muteBtn {
-      top: 105%;
+      top: 114%;
       left: 50%;
     }
 
@@ -964,6 +977,8 @@
     }
 
     function triggerHaptic(pattern) {
+      // NOTE: iOS Safari blocks navigator.vibrate.
+      // This will work natively on Android web, or cross-platform if wrapped in Capacitor later.
       if ('vibrate' in navigator) {
         navigator.vibrate(pattern);
       }
