@@ -15,6 +15,7 @@
       --text-main: #ffffff;
       --text-muted: #8b92a5;
       --pastel-grad: linear-gradient(135deg, #ff7eb3 0%, #8b44fc 50%, #00d2ff 100%);
+      --gold-grad: linear-gradient(135deg, #ffb142 0%, #ff5252 100%);
       --gray-grad: linear-gradient(135deg, #a0a5b5 0%, #4a5065 100%);
       --success: #00f2fe;
     }
@@ -59,7 +60,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 15px; /* Space between logo and text */
+      gap: 15px;
     }
 
     .banner-logo {
@@ -132,6 +133,22 @@
       box-shadow: 0 15px 35px rgba(0, 210, 255, 0.4);
     }
 
+    .btn-gold {
+      background: var(--gold-grad);
+      box-shadow: 0 10px 25px rgba(255, 177, 66, 0.3);
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .btn-gold:hover {
+      box-shadow: 0 15px 35px rgba(255, 82, 82, 0.4);
+    }
+
     .level-grid {
       display: flex;
       flex-direction: column;
@@ -179,6 +196,7 @@
       width: 100%;
       max-width: 400px;
       margin-bottom: 30px;
+      position: relative;
     }
 
     .header-titles {
@@ -201,6 +219,22 @@
       margin-top: 6px;
       letter-spacing: 3px;
       text-transform: uppercase;
+    }
+
+    .timer-display {
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--success);
+      background: rgba(0, 242, 254, 0.1);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      display: none;
     }
 
     .header-actions {
@@ -270,7 +304,7 @@
       transform: translate(-50%, -50%);
       width: clamp(60px, 20vw, 100px);
       opacity: 0.15;
-      pointer-events: none; /* Crucial for preventing drag interference */
+      pointer-events: none;
       z-index: 1;
       filter: drop-shadow(0 0 15px rgba(139, 68, 252, 0.6));
     }
@@ -403,6 +437,15 @@
       margin-bottom: 35px;
       line-height: 1.6;
     }
+    
+    .time-highlight {
+      font-size: 2.5rem;
+      color: var(--success);
+      font-weight: 900;
+      display: block;
+      margin: 15px 0;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -439,11 +482,15 @@
   </div>
 
   <div id="screen-select" class="screen">
+    <button class="btn btn-gold" onclick="startDailyChallenge()">
+      ⏱️ DAILY CHALLENGE
+    </button>
     <div class="level-grid" id="levelGrid"></div>
   </div>
 
   <div id="screen-game" class="screen">
     <div class="game-header">
+      <div class="timer-display" id="timerDisplay">00:00</div>
       <button class="back-btn" onclick="playSnap(); showScreen('screen-select')">⟵</button>
       <div class="header-titles">
         <h1 class="level-text" id="levelDisplay">STAGE 1 / 9</h1>
@@ -473,6 +520,20 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="dailyCompleteModal">
+    <div class="modal-content">
+      <h2 class="modal-title" style="background: var(--gold-grad); -webkit-background-clip: text;">DAILY CLEARED</h2>
+      <p class="modal-text">
+        Sequence synchronized in:
+        <span class="time-highlight" id="dailyTimeText">00:00</span>
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        <button class="btn" style="background: var(--gold-grad);" onclick="shareDaily()">Share Result ➦</button>
+        <button class="btn" style="background: var(--surface); color: white; border: 1px solid rgba(255,255,255,0.1);" onclick="playSnap(); closeModal('dailyCompleteModal', 'screen-select')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="defModal">
     <div class="modal-content">
       <h2 class="modal-title" style="font-size: 1.5rem;">DATA LOG</h2>
@@ -482,18 +543,14 @@
   </div>
 
   <script>
-    
-    const baseSnapAudio = new Audio('generic-click.wav');
-    
+    const baseSnapAudio = new Audio('generic-click.mp3');
     function playSnap() {
       const sound = baseSnapAudio.cloneNode();
       sound.volume = 0.5; 
-      sound.play().catch(e => {
-        console.log("Audio waiting for user interaction");
-      });
+      sound.play().catch(e => console.log("Audio waiting"));
     }
-    // --------------------
 
+    // --- GAME STATE ---
     let currentDifficulty = 4;
     let targetWord = "";
     let currentDefinition = "";
@@ -504,6 +561,11 @@
     let activeDragIndex = null, isDragging = false;
     let startPointerX = 0, startPointerY = 0, currentTranslateX = 0, currentTranslateY = 0;
 
+    // --- DAILY CHALLENGE STATE ---
+    let isDailyMode = false;
+    let dailyStartTime = 0;
+    let timerInterval = null;
+
     const puzzleContainer = document.getElementById('puzzleContainer');
     const wireLayer = document.getElementById('wireLayer');
     const orbLayer = document.getElementById('orbLayer');
@@ -513,6 +575,7 @@
     const hintBtn = document.getElementById('hintBtn');
     const defBtn = document.getElementById('defBtn');
     const gameBoard = document.getElementById('gameBoard');
+    const timerDisplay = document.getElementById('timerDisplay');
     
     function getRequiredStages(letterCount) { return (letterCount - 1) * 3; }
     function getUnlocked() { return parseInt(localStorage.getItem('glyphloUnlocked')) || 4; }
@@ -521,6 +584,10 @@
     function setLevelsSolved(data) { localStorage.setItem('glyphloLevelsSolved', JSON.stringify(data)); }
 
     function showScreen(id) {
+      if (id !== 'screen-game') {
+        clearInterval(timerInterval);
+        isDailyMode = false;
+      }
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       if (id === 'screen-select') buildLevels();
@@ -536,11 +603,61 @@
         btn.disabled = i > unlocked;
         btn.onclick = () => { 
           playSnap(); 
+          isDailyMode = false;
           currentDifficulty = i; 
           showScreen('screen-game'); 
           startLevel(); 
         };
         grid.appendChild(btn);
+      }
+    }
+
+    // --- DAILY CHALLENGE LOGIC ---
+    function startDailyChallenge() {
+      playSnap();
+      const today = new Date().toDateString();
+      const completedDate = localStorage.getItem('glyphloDailyDate');
+      
+      if (completedDate === today) {
+        const timeLogged = localStorage.getItem('glyphloDailyTime');
+        alert(`Synchronized! You already completed today's challenge in ${timeLogged}. Come back tomorrow!`);
+        return;
+      }
+
+      isDailyMode = true;
+      currentDifficulty = 5; // Starts at 5 letters
+      dailyStartTime = Date.now();
+      timerDisplay.style.display = 'block';
+      
+      clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimer, 1000);
+      updateTimer(); // Call immediately to prevent 1-second visual delay
+
+      showScreen('screen-game');
+      startLevel();
+    }
+
+    function updateTimer() {
+      if (!isDailyMode) return;
+      const elapsed = Math.floor((Date.now() - dailyStartTime) / 1000);
+      const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const s = String(elapsed % 60).padStart(2, '0');
+      timerDisplay.textContent = `${m}:${s}`;
+    }
+
+    function shareDaily() {
+      playSnap();
+      const timeStr = localStorage.getItem('glyphloDailyTime');
+      const shareText = `Glyphlo Daily Challenge ⏱️\nI solved the 5, 6, and 7-letter sequence in ${timeStr}!\nCan you beat my synchronization time?`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: 'Glyphlo Daily',
+          text: shareText
+        }).catch(err => console.log('Share canceled or failed', err));
+      } else {
+        navigator.clipboard.writeText(shareText);
+        alert("Result copied to clipboard!");
       }
     }
 
@@ -575,9 +692,21 @@
       isAnimating = false; selectedIndex = null; activeDragIndex = null;
       orbLayer.innerHTML = ''; 
       wireLayer.querySelectorAll('polygon').forEach(p => p.remove());
-      const solved = getLevelsSolved()[currentDifficulty] || 0;
-      levelDisplay.textContent = `STAGE ${solved + 1} / ${getRequiredStages(currentDifficulty)}`;
-      flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
+      
+      // UI updates based on mode
+      if (isDailyMode) {
+        timerDisplay.style.display = 'block';
+        levelDisplay.textContent = `DAILY ${currentDifficulty - 4} / 3`;
+        flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
+        hintBtn.style.display = 'none'; // Optional: disable hints in daily challenge
+      } else {
+        timerDisplay.style.display = 'none';
+        hintBtn.style.display = 'block';
+        const solved = getLevelsSolved()[currentDifficulty] || 0;
+        levelDisplay.textContent = `STAGE ${solved + 1} / ${getRequiredStages(currentDifficulty)}`;
+        flavorDisplay.textContent = `${currentDifficulty} LETTERS`;
+      }
+
       guessDisplay.textContent = "WAIT...";
       guessDisplay.style.color = "transparent";
       
@@ -601,7 +730,6 @@
         const dot = document.createElement('div');
         
         dot.className = `dot ${i === 0 ? 'start-node' : ''}`;
-        
         dot.style.left = `${px - dotSize / 2}px`; dot.style.top = `${py - dotSize / 2}px`;
         setupInteraction(dot, i);
         orbLayer.appendChild(dot);
@@ -621,7 +749,7 @@
     }
 
     function useHint() {
-      if (isAnimating) return;
+      if (isAnimating || isDailyMode) return;
       playSnap(); 
       let wrongIndices = [];
       for (let i = 0; i < targetWord.length; i++) { if (!lockedOrbs[i] && currentLetters[i] !== targetWord[i]) { wrongIndices.push(i); } }
@@ -730,27 +858,49 @@
             guessDisplay.style.color = "transparent";
             guessDisplay.style.background = "var(--pastel-grad)";
             guessDisplay.style.webkitBackgroundClip = "text";
-            updateDifficultySolved();
+            handleWinProgression();
           }, 1000);
         }, 800);
       }
     }
 
-    function updateDifficultySolved() {
-      let data = getLevelsSolved();
-      let currentSolved = data[currentDifficulty] || 0;
-      currentSolved++;
-      data[currentDifficulty] = currentSolved;
-      setLevelsSolved(data);
-      
-      const required = getRequiredStages(currentDifficulty);
-      if (currentSolved >= required) {
-        if (currentDifficulty >= getUnlocked()) setUnlocked(currentDifficulty + 1);
-        document.getElementById('modalText').textContent = `Pattern complete. System upgraded to ${currentDifficulty + 1} letter sequence.`;
-        document.getElementById('milestoneModal').classList.add('active');
-        buildLevels();
+    function handleWinProgression() {
+      if (isDailyMode) {
+        currentDifficulty++;
+        if (currentDifficulty > 7) {
+          // Finished the Daily Challenge!
+          clearInterval(timerInterval);
+          isDailyMode = false;
+          
+          const finalTimeStr = timerDisplay.textContent;
+          document.getElementById('dailyTimeText').textContent = finalTimeStr;
+          
+          // Save completion state to prevent re-playing today
+          localStorage.setItem('glyphloDailyDate', new Date().toDateString());
+          localStorage.setItem('glyphloDailyTime', finalTimeStr);
+          
+          document.getElementById('dailyCompleteModal').classList.add('active');
+        } else {
+          // Next daily puzzle
+          startLevel();
+        }
       } else {
-        startLevel();
+        // Normal mode progression
+        let data = getLevelsSolved();
+        let currentSolved = data[currentDifficulty] || 0;
+        currentSolved++;
+        data[currentDifficulty] = currentSolved;
+        setLevelsSolved(data);
+        
+        const required = getRequiredStages(currentDifficulty);
+        if (currentSolved >= required) {
+          if (currentDifficulty >= getUnlocked()) setUnlocked(currentDifficulty + 1);
+          document.getElementById('modalText').textContent = `Pattern complete. System upgraded to ${currentDifficulty + 1} letter sequence.`;
+          document.getElementById('milestoneModal').classList.add('active');
+          buildLevels();
+        } else {
+          startLevel();
+        }
       }
     }
 
@@ -762,11 +912,8 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful');
-          }, err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
+          .then(reg => console.log('ServiceWorker registered'))
+          .catch(err => console.log('ServiceWorker failed: ', err));
       });
     }
     
