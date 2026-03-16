@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Glyphlo</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#08080c">
@@ -40,6 +43,22 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0;
+      border: 4px solid transparent;
+      background: var(--pastel-grad) border-box;
+      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none; /* Allows taps to pass through to the game */
+      z-index: 9999;
     }
 
     .top-banner {
@@ -577,9 +596,29 @@
       menuAudioPool.push(mAudio);
     }
 
-    document.addEventListener('pointerdown', () => {
+    const unlockAudio = () => {
       if (!audioUnlocked) {
         bgMusic.play().catch(e => { });
+        
+        gameAudioPool.forEach(a => {
+          a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(e => { });
+        });
+        
+        menuAudioPool.forEach(a => {
+          a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(e => { });
+        });
+
+        winAudio.play().then(() => { winAudio.pause(); winAudio.currentTime = 0; }).catch(e => { });
+
+        audioUnlocked = true;
+        
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+      }
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio, { passive: true });
         
         gameAudioPool.forEach(a => {
           a.play().then(() => {
